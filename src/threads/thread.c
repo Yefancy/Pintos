@@ -237,7 +237,7 @@ thread_block (void)
    it may expect that it can atomically unblock a thread and
    update other data. */
 void
-thread_unblock (struct thread *t) 
+thread_unblock (struct thread *t)
 {
   enum intr_level old_level;
 
@@ -245,7 +245,10 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  //list_push_back (&ready_list, &t->elem);
+  //修正为插入并排序
+  list_insert_ordered(&ready_list, &t->elem,
+                       (list_less_func *)&thread_compare_priority, 1);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -316,7 +319,10 @@ thread_yield (void)
 
   old_level = intr_disable (); //如何当前线程不是空闲的线程就调用list_push_back把当前线程的元素扔到就绪队列里面， 并把线程改成THREAD_READY状态。
   if (cur != idle_thread)
-    list_push_back (&ready_list, &cur->elem);
+    //list_push_back (&ready_list, &cur->elem);
+    //修正为插入并排序
+    list_insert_ordered(&ready_list, &cur->elem,
+                         (list_less_func *)&thread_compare_priority, 1);
   cur->status = THREAD_READY;
   schedule ();//拿下一个线程切换过来继续run。
   intr_set_level (old_level);
@@ -357,6 +363,17 @@ thread_revise_blocked_ticks(struct thread *threadin,void *aux)
       thread_unblock(threadin);
     }
   }
+}
+
+//函数：比较优先级 前者大返回true
+bool
+thread_compare_priority(list_elem *origin, list_elem *ins, void *aux)
+{
+  //list拆包 获取对应的线程优先级
+  int origin_p = list_entry(origin, struct thread, elem)->priority;
+  //list拆包 获取对应的线程优先级
+  int ins_p = list_entry(ins, struct thread, elem)->priority;
+  return origin_p > ins_p;
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
@@ -489,7 +506,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
-  list_push_back (&all_list, &t->allelem);
+  //list_push_back (&all_list, &t->allelem);
+  //修正为插入队列并排序
+  list_insert_ordered(&all_list, &t->allelem,
+                       (list_less_func *)&thread_compare_priority, 1);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
