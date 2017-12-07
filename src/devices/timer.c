@@ -179,8 +179,8 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();//线程tick处理
-  thread_foreach();//所有线程 遍历调用函数
-  
+  thread_foreach((thread_action_func *)blocked_thread_check,NULL);//所有线程 遍历调用函数
+
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
