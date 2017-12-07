@@ -88,6 +88,7 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    int64_t blocked_ticks               /*阻塞时间*/
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
@@ -109,6 +110,9 @@ extern bool thread_mlfqs;
 
 void thread_init (void);
 void thread_start (void);
+
+//新增函数声明
+void thread_revise_blocked_ticks(struct thread *threadin,void *aux);//修正线程阻塞时间函数
 
 void thread_tick (void);
 void thread_print_stats (void);
