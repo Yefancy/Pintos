@@ -207,7 +207,12 @@ thread_create (const char *name, int priority,
   intr_set_level (old_level);
 
   /* Add to run queue. */
-  thread_unblock (t);
+  thread_unblock (t);//加入就绪队列
+
+  if (thread_current()->priority < priority)//优先级有差异下才抢占
+  {
+    thread_yield();
+  }
 
   return tid;
 }
@@ -380,7 +385,8 @@ thread_compare_priority(list_elem *origin, list_elem *ins, void *aux)
 void
 thread_set_priority (int new_priority)
 {
-  thread_current ()->priority = new_priority;
+    thread_current ()->priority = new_priority;
+    thread_yield();//修改优先级后 重新挑选优先级高的线程跑
 }
 
 /* Returns the current thread's priority. */
