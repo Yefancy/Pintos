@@ -386,7 +386,8 @@ void
 thread_set_priority (int new_priority)
 {
     thread_current ()->priority = new_priority;
-    thread_yield();//修改优先级后 重新挑选优先级高的线程跑
+    if(list_entry (list_front (&ready_list), struct thread, elem)->priority > new_priority)
+      thread_yield();//修改优先级后 优先级小于就绪队列的队首线程 重新挑选优先级高的线程跑
 }
 
 /* Returns the current thread's priority. */
