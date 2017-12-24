@@ -403,9 +403,15 @@ thread_update_priority(struct thread *t)
 void
 thread_set_priority (int new_priority)
 {
+  enum intr_level old_level = intr_disable ();
+
+  thread_current()->original_priority = new_priority;//更新原始优先级
     thread_current ()->priority = new_priority;
-    if(list_entry (list_front (&ready_list), struct thread, elem)->priority > new_priority)
+    //if(list_entry (list_front (&ready_list), struct thread, elem)->priority > new_priority)
+    thread_update_priority(thread_current());
       thread_yield();//修改优先级后 优先级小于就绪队列的队首线程 重新挑选优先级高的线程跑
+
+  intr_set_level (old_level);
 }
 
 /* Returns the current thread's priority. */
