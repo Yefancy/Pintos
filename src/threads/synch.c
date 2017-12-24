@@ -197,10 +197,54 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
+   enum intr_level old_level;
+  if(lock->holder != NULL)                          //如果这个锁已被持有            
+  {
+    thread_current()->lock_acquire=lock;          //当前线程申请这个锁
+    struct lock *lock_tmp;
+    lock_tmp = lock;
+    while(lock_tmp != NULL)                                       //递归捐赠优先级
+    {
+        if(thread_current()->priority <= lock_tmp->priority)
+         break;
+        lock_tmp->max_priority = thread_current()->priority;
+
+        old_level = intr_disable();                               //优先级捐赠
+        thread_updaate_priority(lock_tmp->holder);
+        if(lock_tmp->holder->status == THREAD_READY)
+        {
+          list_remove (&lock_tmp->elem);
+          list_insert_ordered(&ready_list,&lock_tmp->elem,thread_compare_priority,NULL);
+        }
+        intr_set_level(old_level);
+
+        lock_tmp = lock_tmp->holder->lock_acquire;                //递归后继锁
+    }
+  }
+
   sema_down (&lock->semaphore);
+  old_level = intr_disable();
+
+  thread_current()->lock_acquire = NULL;
+  lock->max_priority = thread_current()->priority;
+
+  list_insert_ordered(&thread_current()->lock,&lock->elem,lock_compare_priority,NULL);   //将锁排序插入到线程持有锁队列中
+  if(lock->max_priority>thread_current()->priority)
+  {
+    thread_current()->priority = lock->max_priority;
+    thread_yield();
+  }
+
   lock->holder = thread_current ();
+
+  intr_set_level(old_level);
 }
 
+bool
+lock_compare_priority(const struct list_elem *original, const struct list_elem *ins, void *aux UNUSED)
+{
+  return list_entry(original, struct lock,elem)->max_priority > list_entry(ins, struct lock,elem)->max_priority;
+}
 /* Tries to acquires LOCK and returns true if successful or false
    on failure.  The lock must not already be held by the current
    thread.
@@ -232,8 +276,14 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
+  enum intr_level old_level =intr_disable();
+
+  list_remove(&lock->elem);                       //移除持有的锁
+  thread_updaate_priority(thread_current());      //更新线程优先级
   lock->holder = NULL;
   sema_up (&lock->semaphore);
+
+  intr_set_level(old_level);
 }
 
 /* Returns true if the current thread holds LOCK, false

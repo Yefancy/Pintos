@@ -120,6 +120,7 @@ void thread_start (void);
 void thread_revise_blocked_ticks(struct thread *threadin,void *aux);//修正线程阻塞时间函数
 bool thread_compare_priority(list_elem *origin, list_elem *ins, void *aux);//比较优先级 前者大返回true
 
+void thread_update_priority(struct thread *); //更新线程优先级
 void thread_tick (void);
 void thread_print_stats (void);
 

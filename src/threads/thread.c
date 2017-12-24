@@ -381,6 +381,24 @@ thread_compare_priority(list_elem *origin, list_elem *ins, void *aux)
   return origin_p > ins_p;
 }
 
+void
+thread_update_priority(struct thread *t)
+{
+  enum intr_level old_level = intr_disable ();
+  
+  if(!list_empty(&t->locks))                   //如果这个线程有锁
+  {
+    if(list_entry(list_front(&t->locks),struct lock,elem)->max_priority > t->original_priority)
+      t->priority = list_entry(list_front(&t->locks),struct lock,elem)->max_priority;
+    else
+      t->priority = t->original_priority;
+  }
+  else
+    t->priority = t->original_priority;
+
+  intr_set_level (old_level);
+}
+
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority)
@@ -517,6 +535,10 @@ init_thread (struct thread *t, const char *name, int priority)
   //修正为插入队列并排序
   list_insert_ordered(&all_list, &t->allelem,
                        (list_less_func *)&thread_compare_priority, 1);
+
+  t->original_priority = priority;
+  list_init(&t->locks);
+  t->lock_acquire = NULL;
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -628,6 +650,8 @@ allocate_tid (void)
 
   return tid;
 }
+
+
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
