@@ -88,11 +88,11 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
-    int64_t blocked_ticks               /*阻塞时间*/
+    int64_t blocked_ticks;               /*阻塞时间*/
 
-    int original_priority               //原始优先级
-    struct list locks                   //这个线程已持有锁的队列
-    struct lock *lock_acquire           //这个线程正在申请的锁
+    int original_priority;               //原始优先级
+    struct list locks;                   //这个线程已持有锁的队列
+    struct lock *lock_acquire;           //这个线程正在申请的锁
 
     struct list_elem allelem;           /* List element for all threads list. */
 
