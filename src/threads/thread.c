@@ -386,8 +386,9 @@ thread_update_priority(struct thread *t)
   
   if(!list_empty(&t->locks))                   //如果这个线程有锁
   {
+    list_sort(&t->locks,lock_compare_priority,NULL);
     if(list_entry(list_front(&t->locks),struct lock,elem)->max_priority > t->original_priority)
-      t->priority = list_entry(list_front(&t->locks),struct lock,elem)->max_priority;
+      t->pirority = list_entry(list_front(&t->locks),struct lock,elem)->max_priority;
     else
       t->priority = t->original_priority;
   }
