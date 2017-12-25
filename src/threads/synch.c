@@ -116,7 +116,7 @@ sema_up (struct semaphore *sema)
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters)) //如果还有线程申请信号量 则唤醒该线程
   {
-    //list_sort (&sema->waiters, thread_compare_priority, NULL);//优先级排序
+    list_sort (&sema->waiters, thread_compare_priority, NULL);//优先级排序
     thread_unblock (list_entry (list_pop_front (&sema->waiters),
                                 struct thread, elem));
   }
@@ -203,7 +203,7 @@ lock_acquire (struct lock *lock)
   ASSERT (!lock_held_by_current_thread (lock));
 
    enum intr_level old_level;
-  if(lock->holder != NULL)                          //如果这个锁已被持有            
+  if(lock->holder != NULL)                          //如果这个锁已被持有
   {
     thread_current()->lock_acquire=lock;          //当前线程申请这个锁
     struct lock *lock_tmp;
