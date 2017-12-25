@@ -362,10 +362,8 @@ thread_revise_blocked_ticks(struct thread *threadin,void *aux)
     if(threadin->blocked_ticks > 0)//阻塞时间未到
     {
       threadin->blocked_ticks--;
-    }
-    else if(threadin->blocked_ticks == 0)//阻塞时间结束
-    {
-      thread_unblock(threadin);
+      if(threadin->blocked_ticks == 0)//阻塞时间结束 必须是sleep才会以此种方式=0时unblock eg:对于sema的阻塞不应该=0时unblock
+        thread_unblock(threadin);
     }
   }
 }

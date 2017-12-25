@@ -215,7 +215,7 @@ lock_acquire (struct lock *lock)
         lock_tmp->max_priority = thread_current()->priority;
 
         old_level = intr_disable();                               //优先级捐赠
-        thread_updaate_priority(lock_tmp->holder);
+        thread_update_priority(lock_tmp->holder);
         if(lock_tmp->holder->status == THREAD_READY)
         {
           list_remove (&lock_tmp->elem);
@@ -233,12 +233,7 @@ lock_acquire (struct lock *lock)
   thread_current()->lock_acquire = NULL;
   lock->max_priority = thread_current()->priority;
 
-  list_insert_ordered(&thread_current()->lock,&lock->elem,lock_compare_priority,NULL);   //将锁排序插入到线程持有锁队列中
-  if(lock->max_priority>thread_current()->priority)
-  {
-    thread_current()->priority = lock->max_priority;
-    thread_yield();
-  }
+  list_insert_ordered(&thread_current()->locks,&lock->elem,lock_compare_priority,NULL);   //将锁排序插入到线程持有锁队列中
 
   lock->holder = thread_current ();
 
