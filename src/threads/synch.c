@@ -279,7 +279,7 @@ lock_release (struct lock *lock)
   enum intr_level old_level =intr_disable();
 
   list_remove(&lock->elem);                       //移除持有的锁
-  thread_updaate_priority(thread_current());      //更新线程优先级
+  thread_update_priority(thread_current());      //更新线程优先级
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 
