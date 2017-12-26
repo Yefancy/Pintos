@@ -203,7 +203,7 @@ lock_acquire (struct lock *lock)
   ASSERT (!lock_held_by_current_thread (lock));
 
    enum intr_level old_level;
-  if(lock->holder != NULL)                          //如果这个锁已被持有
+  if(lock->holder != NULL && !thread_mlfqs)                          //如果这个锁已被持有
   {
     thread_current()->lock_acquire=lock;          //当前线程申请这个锁
     struct lock *lock_tmp;
@@ -231,10 +231,10 @@ lock_acquire (struct lock *lock)
   old_level = intr_disable();
 
   thread_current()->lock_acquire = NULL;
-  lock->max_priority = thread_current()->priority;
-
-  list_insert_ordered(&thread_current()->locks,&lock->elem,lock_compare_priority,NULL);   //将锁排序插入到线程持有锁队列中
-
+  if(!thread_mlfqs){
+    lock->max_priority = thread_current()->priority;
+    list_insert_ordered(&thread_current()->locks,&lock->elem,lock_compare_priority,NULL);   //将锁排序插入到线程持有锁队列中
+  }
   lock->holder = thread_current ();
 
   intr_set_level(old_level);
@@ -277,13 +277,13 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   enum intr_level old_level =intr_disable();
-
-  list_remove(&lock->elem);                       //移除持有的锁
-  thread_update_priority(thread_current());      //更新线程优先级
-  lock->holder = NULL;
-  sema_up (&lock->semaphore);
-
+  if(!thread_mlfqs){
+    list_remove(&lock->elem);                       //移除持有的锁
+    thread_update_priority(thread_current());      //更新线程优先级
+    lock->holder = NULL;
+  }
   intr_set_level(old_level);
+  sema_up (&lock->semaphore);
 }
 
 /* Returns true if the current thread holds LOCK, false
