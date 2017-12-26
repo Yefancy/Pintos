@@ -428,15 +428,23 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice UNUSED)
 {
-  /* Not yet implemented. */
+  struct thread *t = thread_current();
+  t->nice = nice;
+  if(t != idle_thread)//非空闲线程
+  {
+
+    t->priority = MU_INT_PART (MU_SUB_MIX (MU_SUB (MU_CONST (PRI_MAX), MU_DIV_MIX (t->recent_cpu, 4)), 2 * t->nice));
+    t->priority = t->priority < PRI_MIN ? PRI_MIN : t->priority;
+    t->priority = t->priority > PRI_MAX ? PRI_MAX : t->priority;
+  }
+  thread_yield ();//更新
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void)
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current()->nice;
 }
 
 /* Returns 100 times the system load average. */
@@ -444,7 +452,7 @@ int
 thread_get_load_avg (void)
 {
   /* Not yet implemented. */
-  return 0;
+  return MU_ROUND (MU_MULT_MIX (load_avg, 100));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
@@ -452,7 +460,7 @@ int
 thread_get_recent_cpu (void)
 {
   /* Not yet implemented. */
-  return 0;
+  return MU_ROUND (MU_MULT_MIX (thread_current ()->recent_cpu, 100));
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
