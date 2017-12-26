@@ -432,10 +432,7 @@ thread_set_nice (int nice UNUSED)
   t->nice = nice;
   if(t != idle_thread)//非空闲线程
   {
-
     t->priority = MU_INT_PART (MU_SUB_MIX (MU_SUB (MU_CONST (PRI_MAX), MU_DIV_MIX (t->recent_cpu, 4)), 2 * t->nice));
-    t->priority = t->priority < PRI_MIN ? PRI_MIN : t->priority;
-    t->priority = t->priority > PRI_MAX ? PRI_MAX : t->priority;
   }
   thread_yield ();//更新
 }
