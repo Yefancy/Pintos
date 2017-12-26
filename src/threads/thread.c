@@ -50,6 +50,9 @@ static long long idle_ticks;    /* # of timer ticks spent idle. */
 static long long kernel_ticks;  /* # of timer ticks in kernel threads. */
 static long long user_ticks;    /* # of timer ticks in user programs. */
 
+/*load_avg*/
+float_t load_avg;               //估计在过去几分钟内准备好运行的线程的平均线程数
+
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
 static unsigned thread_ticks;   /* # of timer ticks since last yield. */
@@ -105,6 +108,7 @@ thread_init (void)
 void
 thread_start (void)
 {
+  load_avg = MU_CONST (0); //load_avg在引导时被初始化为0
   /* Create the idle thread. */
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
@@ -383,7 +387,7 @@ void
 thread_update_priority(struct thread *t)
 {
   enum intr_level old_level = intr_disable ();
-  
+
   if(!list_empty(&t->locks))                   //如果这个线程有锁
   {
     list_sort(&t->locks,lock_compare_priority,NULL);
@@ -542,6 +546,8 @@ init_thread (struct thread *t, const char *name, int priority)
                        (list_less_func *)&thread_compare_priority, 1);
 
   t->original_priority = priority;
+  t->nice = 0;
+  t->recent_cpu = MU_CONST (0);
   list_init(&t->locks);
   t->lock_acquire = NULL;
 }

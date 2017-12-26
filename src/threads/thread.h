@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "threads/math_utils.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -93,6 +94,8 @@ struct thread
     int original_priority;               //原始优先级
     struct list locks;                   //这个线程已持有锁的队列
     struct lock *lock_acquire;           //这个线程正在申请的锁
+    int nice;                            //nice值 衡量一个线程的友好性
+    float_t recent_cpu;                  //最近接受的时间片衡量
 
     struct list_elem allelem;           /* List element for all threads list. */
 
