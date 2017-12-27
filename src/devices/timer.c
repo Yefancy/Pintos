@@ -196,7 +196,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
     */
     if (ticks % TIMER_FREQ == 0)
     {
-      size_t ready_threads = list_size(thread_get_ready_list);
+      size_t ready_threads = list_size(thread_get_ready_list());
       if(!thread_is_idle_thread(t))//如果非空闲线程 那么已就绪的线程数（课直接运行的线程数）+1
         ready_threads++;
 
