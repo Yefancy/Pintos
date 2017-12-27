@@ -392,7 +392,7 @@ thread_update_priority(struct thread *t)
   {
     list_sort(&t->locks,lock_compare_priority,NULL);
     if(list_entry(list_front(&t->locks),struct lock,elem)->max_priority > t->original_priority)
-      t->pirority = list_entry(list_front(&t->locks),struct lock,elem)->max_priority;
+      t->priority = list_entry(list_front(&t->locks),struct lock,elem)->max_priority;
     else
       t->priority = t->original_priority;
   }
