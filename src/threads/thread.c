@@ -383,6 +383,35 @@ thread_compare_priority(struct list_elem  *origin, struct list_elem *ins, void *
   return origin_p > ins_p;
 }
 
+//函数：获取就绪队列 ready_list
+struct list *
+thread_get_ready_list()
+{
+  return &ready_list;
+}
+
+//函数：获取所有线程队列 all_list
+struct list *
+thread_get_all_list()
+{
+  return &all_list;
+}
+
+//函数：判断是否为空闲线程
+bool
+thread_is_idle_thread(struct thread *t)
+{
+  return t == idle_thread;
+}
+
+//函数：获取load_avg源
+float_t *
+thread_get_load_avg_src()
+{
+  return &load_avg;
+}
+
+//函数：更新优先级
 void
 thread_update_priority(struct thread *t)
 {
@@ -406,13 +435,14 @@ thread_update_priority(struct thread *t)
 void
 thread_set_priority (int new_priority)
 {
+  if (thread_mlfqs)
+      return;
   enum intr_level old_level = intr_disable ();
 
   thread_current()->original_priority = new_priority;//更新原始优先级
-    thread_current ()->priority = new_priority;
-    //if(list_entry (list_front (&ready_list), struct thread, elem)->priority > new_priority)
-    thread_update_priority(thread_current());
-      thread_yield();//修改优先级后 优先级小于就绪队列的队首线程 重新挑选优先级高的线程跑
+  //if(list_entry (list_front (&ready_list), struct thread, elem)->priority > new_priority)
+  thread_update_priority(thread_current());
+  thread_yield();//修改优先级后 优先级小于就绪队列的队首线程 重新挑选优先级高的线程跑
 
   intr_set_level (old_level);
 }
@@ -545,16 +575,15 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+  t->original_priority = priority;
+  list_init(&t->locks);
+  t->lock_acquire = NULL;
   //list_push_back (&all_list, &t->allelem);
   //修正为插入队列并排序
   list_insert_ordered(&all_list, &t->allelem,
                        (list_less_func *)&thread_compare_priority, NULL);
-
-  t->original_priority = priority;
   t->nice = 0;
   t->recent_cpu = MU_CONST (0);
-  list_init(&t->locks);
-  t->lock_acquire = NULL;
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and

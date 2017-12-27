@@ -122,6 +122,11 @@ void thread_start (void);
 //新增函数声明
 void thread_revise_blocked_ticks(struct thread *threadin,void *aux);//修正线程阻塞时间函数
 bool thread_compare_priority(struct list_elem *origin, struct list_elem *ins, void *aux);//比较优先级 前者大返回true
+struct list *thread_get_ready_list();
+struct list *thread_get_all_list();
+bool thread_is_idle_thread(struct thread *);
+float_t *thread_get_load_avg_src();//获取laod_avg源
+
 
 void thread_update_priority(struct thread *); //更新线程优先级
 void thread_tick (void);
