@@ -374,7 +374,7 @@ thread_revise_blocked_ticks(struct thread *threadin,void *aux)
 
 //函数：比较优先级 前者大返回true
 bool
-thread_compare_priority(list_elem *origin, list_elem *ins, void *aux)
+thread_compare_priority(struct list_elem  *origin, struct list_elem *ins, void *aux)
 {
   //list拆包 获取对应的线程优先级
   int origin_p = list_entry(origin, struct thread, elem)->priority;
