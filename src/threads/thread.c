@@ -257,7 +257,7 @@ thread_unblock (struct thread *t)
   //list_push_back (&ready_list, &t->elem);
   //修正为插入并排序
   list_insert_ordered(&ready_list, &t->elem,
-                       (list_less_func *)&thread_compare_priority, 1);
+                       (list_less_func *)&thread_compare_priority, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -331,7 +331,7 @@ thread_yield (void)
     //list_push_back (&ready_list, &cur->elem);
     //修正为插入并排序
     list_insert_ordered(&ready_list, &cur->elem,
-                         (list_less_func *)&thread_compare_priority, 1);
+                         (list_less_func *)&thread_compare_priority, NULL);
   cur->status = THREAD_READY;
   schedule ();//拿下一个线程切换过来继续run。
   intr_set_level (old_level);
@@ -548,7 +548,7 @@ init_thread (struct thread *t, const char *name, int priority)
   //list_push_back (&all_list, &t->allelem);
   //修正为插入队列并排序
   list_insert_ordered(&all_list, &t->allelem,
-                       (list_less_func *)&thread_compare_priority, 1);
+                       (list_less_func *)&thread_compare_priority, NULL);
 
   t->original_priority = priority;
   t->nice = 0;
