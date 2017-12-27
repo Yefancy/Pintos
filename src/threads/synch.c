@@ -377,6 +377,8 @@ sema_compare_priority(const struct list_elem *original,const struct list_elem *i
 {
   struct semaphore_elem *a = list_entry(original, struct semaphore_elem, elem);
   struct semaphore_elem *b = list_entry(ins, struct semaphore_elem, elem);
+  list_sort (&(a->semaphore.waiters), thread_compare_priority, NULL);//优先级排序
+  list_sort (&(b->semaphore.waiters), thread_compare_priority, NULL);//优先级排序
   return list_entry(list_front(&a->semaphore.waiters), struct thread, elem)->priority > list_entry(list_front(&b->semaphore.waiters), struct thread, elem)->priority;
 }
 /* Wakes up all threads, if any, waiting on COND (protected by
