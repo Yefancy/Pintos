@@ -46,7 +46,7 @@ void cond_broadcast (struct condition *, struct lock *);
 bool
 lock_compare_priority(const struct list_elem *, const struct list_elem *, void *aux );  //前者大返回true
 bool
-sema_compare_priority(const struct list_elem *original,const struct list_elem *ins,void *aux UNUSED);//前者大返回true
+sema_compare_priority(const struct list_elem *,const struct list_elem *,void *aux );//前者大返回true
 
 /* Optimization barrier.
 
