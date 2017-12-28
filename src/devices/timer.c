@@ -177,11 +177,12 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
-  ticks++;
+
   thread_tick ();//线程tick处理
   thread_foreach((thread_action_func *)&thread_revise_blocked_ticks ,1);//所有线程 遍历调用函数
   if(thread_mlfqs)
   {
+    ticks++;
     float_t *load_avg = thread_get_load_avg_src();
     struct thread *t = thread_current();
     if(!thread_is_idle_thread(t))
@@ -229,7 +230,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
         }
       }
     }
-    else if (ticks % 4 == 3 && !thread_is_idle_thread(t))
+        if (ticks % 4 == 3 && !thread_is_idle_thread(t))
       //更新优先级 PRI_MAX- （recent_cpu / 4） - （nice * 2）
       t->priority = MU_INT_PART (MU_SUB_MIX (MU_SUB (MU_CONST (PRI_MAX), MU_DIV_MIX (t->recent_cpu, 4)), 2 * t->nice));
   }
