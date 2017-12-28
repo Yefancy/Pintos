@@ -125,7 +125,7 @@ bool thread_compare_priority(struct list_elem *origin, struct list_elem *ins, vo
 struct list *thread_get_ready_list();
 struct list *thread_get_all_list();
 bool thread_is_idle_thread(struct thread *);
-float_t *thread_get_load_avg_src();//获取laod_avg源
+float_t *thread_get_load_avg_src();//获取load_avg源
 
 
 void thread_update_priority(struct thread *); //更新线程优先级

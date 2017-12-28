@@ -229,7 +229,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
         }
       }
     }
-        if (ticks % 4 == 3 && !thread_is_idle_thread(t))
+    else  if (ticks % 4 == 3 && !thread_is_idle_thread(t))
       //更新优先级 PRI_MAX- （recent_cpu / 4） - （nice * 2）
       t->priority = MU_INT_PART (MU_SUB_MIX (MU_SUB (MU_CONST (PRI_MAX), MU_DIV_MIX (t->recent_cpu, 4)), 2 * t->nice));
   }
