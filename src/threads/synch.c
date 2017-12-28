@@ -210,7 +210,7 @@ lock_acquire (struct lock *lock)
     lock_tmp = lock;
     while(lock_tmp != NULL)                                       //递归捐赠优先级
     {
-        if(thread_current()->priority <= lock_tmp->priority)
+        if(thread_current()->priority <= lock_tmp->max_priority)
          break;
         lock_tmp->max_priority = thread_current()->priority;
 
@@ -218,8 +218,8 @@ lock_acquire (struct lock *lock)
         thread_update_priority(lock_tmp->holder);
         if(lock_tmp->holder->status == THREAD_READY)
         {
-          list_remove (&lock_tmp->elem);
-          list_insert_ordered(&ready_list,&lock_tmp->elem,thread_compare_priority,NULL);
+          list_remove (&lock_tmp->holder->elem);
+          list_insert_ordered(thread_get_ready_list(),&lock_tmp->holder->elem,thread_compare_priority,NULL);
         }
         intr_set_level(old_level);
 
@@ -240,6 +240,7 @@ lock_acquire (struct lock *lock)
   intr_set_level(old_level);
 }
 
+//函数 锁的比较
 bool
 lock_compare_priority(const struct list_elem *original, const struct list_elem *ins, void *aux UNUSED)
 {
@@ -280,9 +281,9 @@ lock_release (struct lock *lock)
   if(!thread_mlfqs){
     list_remove(&lock->elem);                       //移除持有的锁
     thread_update_priority(thread_current());      //更新线程优先级
-    lock->holder = NULL;
   }
   intr_set_level(old_level);
+  lock->holder = NULL;
   sema_up (&lock->semaphore);
 }
 
@@ -375,11 +376,14 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   }
 }
 
+//函数：比较信号量
 bool
 sema_compare_priority(const struct list_elem *original,const struct list_elem *ins,void *aux UNUSED)
 {
   struct semaphore_elem *a = list_entry(original, struct semaphore_elem, elem);
   struct semaphore_elem *b = list_entry(ins, struct semaphore_elem, elem);
+  list_sort (&(a->semaphore.waiters), thread_compare_priority, NULL);//优先级排序
+  list_sort (&(b->semaphore.waiters), thread_compare_priority, NULL);//优先级排序
   return list_entry(list_front(&a->semaphore.waiters), struct thread, elem)->priority > list_entry(list_front(&b->semaphore.waiters), struct thread, elem)->priority;
 }
 /* Wakes up all threads, if any, waiting on COND (protected by

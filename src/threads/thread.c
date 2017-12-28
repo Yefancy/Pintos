@@ -50,6 +50,9 @@ static long long idle_ticks;    /* # of timer ticks spent idle. */
 static long long kernel_ticks;  /* # of timer ticks in kernel threads. */
 static long long user_ticks;    /* # of timer ticks in user programs. */
 
+/*load_avg*/
+float_t load_avg;               //估计在过去几分钟内准备好运行的线程的平均线程数
+
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
 static unsigned thread_ticks;   /* # of timer ticks since last yield. */
@@ -105,6 +108,7 @@ thread_init (void)
 void
 thread_start (void)
 {
+  load_avg = MU_CONST (0); //load_avg在引导时被初始化为0
   /* Create the idle thread. */
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
@@ -253,7 +257,7 @@ thread_unblock (struct thread *t)
   //list_push_back (&ready_list, &t->elem);
   //修正为插入并排序
   list_insert_ordered(&ready_list, &t->elem,
-                       (list_less_func *)&thread_compare_priority, 1);
+                       (list_less_func *)&thread_compare_priority, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -327,7 +331,7 @@ thread_yield (void)
     //list_push_back (&ready_list, &cur->elem);
     //修正为插入并排序
     list_insert_ordered(&ready_list, &cur->elem,
-                         (list_less_func *)&thread_compare_priority, 1);
+                         (list_less_func *)&thread_compare_priority, NULL);
   cur->status = THREAD_READY;
   schedule ();//拿下一个线程切换过来继续run。
   intr_set_level (old_level);
@@ -370,7 +374,7 @@ thread_revise_blocked_ticks(struct thread *threadin,void *aux)
 
 //函数：比较优先级 前者大返回true
 bool
-thread_compare_priority(list_elem *origin, list_elem *ins, void *aux)
+thread_compare_priority(struct list_elem  *origin, struct list_elem *ins, void *aux)
 {
   //list拆包 获取对应的线程优先级
   int origin_p = list_entry(origin, struct thread, elem)->priority;
@@ -379,16 +383,45 @@ thread_compare_priority(list_elem *origin, list_elem *ins, void *aux)
   return origin_p > ins_p;
 }
 
+//函数：获取就绪队列 ready_list
+struct list *
+thread_get_ready_list()
+{
+  return &ready_list;
+}
+
+//函数：获取所有线程队列 all_list
+struct list *
+thread_get_all_list()
+{
+  return &all_list;
+}
+
+//函数：判断是否为空闲线程
+bool
+thread_is_idle_thread(struct thread *t)
+{
+  return t == idle_thread;
+}
+
+//函数：获取load_avg源
+float_t *
+thread_get_load_avg_src()
+{
+  return &load_avg;
+}
+
+//函数：更新优先级
 void
 thread_update_priority(struct thread *t)
 {
   enum intr_level old_level = intr_disable ();
-  
+
   if(!list_empty(&t->locks))                   //如果这个线程有锁
   {
     list_sort(&t->locks,lock_compare_priority,NULL);
     if(list_entry(list_front(&t->locks),struct lock,elem)->max_priority > t->original_priority)
-      t->pirority = list_entry(list_front(&t->locks),struct lock,elem)->max_priority;
+      t->priority = list_entry(list_front(&t->locks),struct lock,elem)->max_priority;
     else
       t->priority = t->original_priority;
   }
@@ -402,13 +435,14 @@ thread_update_priority(struct thread *t)
 void
 thread_set_priority (int new_priority)
 {
+  if (thread_mlfqs)
+      return;
   enum intr_level old_level = intr_disable ();
 
   thread_current()->original_priority = new_priority;//更新原始优先级
-    thread_current ()->priority = new_priority;
-    //if(list_entry (list_front (&ready_list), struct thread, elem)->priority > new_priority)
-    thread_update_priority(thread_current());
-      thread_yield();//修改优先级后 优先级小于就绪队列的队首线程 重新挑选优先级高的线程跑
+  //if(list_entry (list_front (&ready_list), struct thread, elem)->priority > new_priority)
+  thread_update_priority(thread_current());
+  thread_yield();//修改优先级后 优先级小于就绪队列的队首线程 重新挑选优先级高的线程跑
 
   intr_set_level (old_level);
 }
@@ -424,15 +458,20 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice UNUSED)
 {
-  /* Not yet implemented. */
+  struct thread *t = thread_current();
+  t->nice = nice;
+  if(t != idle_thread)//非空闲线程
+  {
+    t->priority = MU_INT_PART (MU_SUB_MIX (MU_SUB (MU_CONST (PRI_MAX), MU_DIV_MIX (t->recent_cpu, 4)), 2 * t->nice));
+  }
+  thread_yield ();//更新
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void)
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current()->nice;
 }
 
 /* Returns 100 times the system load average. */
@@ -440,7 +479,7 @@ int
 thread_get_load_avg (void)
 {
   /* Not yet implemented. */
-  return 0;
+  return MU_ROUND (MU_MULT_MIX (load_avg, 100));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
@@ -448,7 +487,7 @@ int
 thread_get_recent_cpu (void)
 {
   /* Not yet implemented. */
-  return 0;
+  return MU_ROUND (MU_MULT_MIX (thread_current ()->recent_cpu, 100));
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -536,14 +575,15 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
-  //list_push_back (&all_list, &t->allelem);
-  //修正为插入队列并排序
-  list_insert_ordered(&all_list, &t->allelem,
-                       (list_less_func *)&thread_compare_priority, 1);
-
   t->original_priority = priority;
   list_init(&t->locks);
   t->lock_acquire = NULL;
+  //list_push_back (&all_list, &t->allelem);
+  //修正为插入队列并排序
+  list_insert_ordered(&all_list, &t->allelem,
+                       (list_less_func *)&thread_compare_priority, NULL);
+  t->nice = 0;
+  t->recent_cpu = MU_CONST (0);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -570,7 +610,10 @@ next_thread_to_run (void)
   if (list_empty (&ready_list))
     return idle_thread;
   else
+  {
+    list_sort(&ready_list,thread_compare_priority,NULL);
     return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  }
 }
 
 /* Completes a thread switch by activating the new thread's page

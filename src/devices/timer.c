@@ -180,6 +180,59 @@ timer_interrupt (struct intr_frame *args UNUSED)
   ticks++;
   thread_tick ();//线程tick处理
   thread_foreach((thread_action_func *)&thread_revise_blocked_ticks ,1);//所有线程 遍历调用函数
+  if(thread_mlfqs)
+  {
+    float_t *load_avg = thread_get_load_avg_src();
+    struct thread *t = thread_current();
+    if(!thread_is_idle_thread(t))
+    {
+      t->recent_cpu = MU_ADD_MIX (t->recent_cpu, 1);
+    }
+    /* Convert NUM/DENOM seconds into timer ticks, rounding down.
+
+          (NUM / DENOM) s
+       ---------------------- = NUM * TIMER_FREQ / DENOM ticks.
+       1 s / TIMER_FREQ ticks pintos中TIMER_FREQ为1秒
+    */
+    if (ticks % TIMER_FREQ == 0)
+    {
+      size_t ready_threads = list_size(thread_get_ready_list());
+      if(!thread_is_idle_thread(t))//如果非空闲线程 那么已就绪的线程数（课直接运行的线程数）+1
+        ready_threads++;
+
+      //更新load_avg值 （59/60）* load_avg +（1/60）* ready_threads
+      *load_avg = MU_ADD (MU_DIV_MIX ( MU_MULT_MIX (*load_avg, 59), 60), MU_DIV_MIX (MU_CONST (ready_threads), 60));
+
+      //更新recent_cpu（每1秒 TIMER_FREQ） （2 * load_avg）/（2 * load_avg + 1）* recent_cpu + nice
+      struct thread *tmp_thread;
+      /*An empty list looks like this:
+
+                         +------+     +------+
+                     <---| head |<--->| tail |--->
+                         +------+     +------+
+
+      A list with two elements in it looks like this:
+
+           +------+     +-------+     +-------+     +------+
+       <---| head |<--->|   1   |<--->|   2   |<--->| tail |<--->
+           +------+     +-------+     +-------+     +------+
+           */
+      //遍历所有线程并更新recent_cpu  list存储方式见上
+      struct list_elem *head = list_head(thread_get_all_list());
+      for(; head != list_end(thread_get_all_list()); head=list_next(head))
+      {
+        tmp_thread = list_entry(head, struct thread, allelem);
+        if(!thread_is_idle_thread(tmp_thread))
+        {
+          tmp_thread->recent_cpu = MU_ADD_MIX (MU_MULT (MU_DIV (MU_MULT_MIX (*load_avg, 2), MU_ADD_MIX (MU_MULT_MIX (*load_avg, 2), 1)), tmp_thread->recent_cpu), tmp_thread->nice);
+          tmp_thread->priority = MU_INT_PART (MU_SUB_MIX (MU_SUB (MU_CONST (PRI_MAX), MU_DIV_MIX (tmp_thread->recent_cpu, 4)), 2 * tmp_thread->nice));
+        }
+      }
+    }
+    else if (ticks % 4 == 3 && !thread_is_idle_thread(t))
+      //更新优先级 PRI_MAX- （recent_cpu / 4） - （nice * 2）
+      t->priority = MU_INT_PART (MU_SUB_MIX (MU_SUB (MU_CONST (PRI_MAX), MU_DIV_MIX (t->recent_cpu, 4)), 2 * t->nice));
+  }
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
